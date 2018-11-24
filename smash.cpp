@@ -28,7 +28,6 @@ char lineSize[MAX_LINE_SIZE];
 
 // Init globals 
 int paretPid;
-bool BGFlag = false;
 string prevDir;
 
 //**************************************************************************************
@@ -54,7 +53,8 @@ int main(int argc, char *argv[])
 	/************************************/
 
 
-	
+
+	bool BGFlag = false;
 	L_Fg_Cmd =(char*)malloc(sizeof(char)*(MAX_LINE_SIZE+1));
 	if (L_Fg_Cmd == NULL) 
 			exit (-1); 
@@ -69,9 +69,9 @@ int main(int argc, char *argv[])
 					// perform a complicated Command
 		if(!ExeComp(lineSize)) continue; 
 					// background command	
-	 	if(!BgCmd(lineSize, jobs)) continue; 
+	 	if(!BgCmd(lineSize, jobs, &BGFlag)) continue;
 					// built in commands
-		ExeCmd(jobs, lineSize, cmdString);
+		ExeCmd(jobs, lineSize, cmdString, BGFlag);
 		
 		/* initialize for next line read*/
 		lineSize[0]='\0';

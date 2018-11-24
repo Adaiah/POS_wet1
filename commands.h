@@ -8,21 +8,23 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <iostream>
+#include <string>
+#include <errno.h>
+#include <vector>
 #define MAX_LINE_SIZE 80
 #define MAX_ARG 20
-typedef enum { FALSE , TRUE } bool;
 typedef struct command {
-	string name;
+	std::string name;
 	int comm_id;
-	int PID;
-	int entry_time;
-	string status; //stopped or not
-	bool built_in; // Yes=true N=false
+	pid_t PID;
+	time_t entry_time;
+	bool status; // stopped or not
+	bool built_in; // Yes=true Nם=false
 }job_command, *pjob_command;
 
 int ExeComp(char* lineSize);
-int BgCmd(char* lineSize, void* jobs);
-int ExeCmd(void* jobs, char* lineSize, char* cmdString);
-void ExeExternal(char *args[MAX_ARG], char* cmdString);
+int BgCmd(char* lineSize, void* jobs, bool* BGFlag);
+int ExeCmd(void* jobs, char* lineSize, char* cmdString, bool BGFlag);
+void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag);
 #endif
-
