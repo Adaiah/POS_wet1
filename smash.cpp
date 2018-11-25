@@ -36,22 +36,19 @@ string prevDir;
 //**************************************************************************************
 int main(int argc, char *argv[])
 {
-    char cmdString[MAX_LINE_SIZE]; 	   
+    char cmdString[MAX_LINE_SIZE];
 
-	
-	//signal declaretions
-	//NOTE: the signal handlers and the function/s that sets the handler should be found in siganls.c
-	 /* add your code here */
-	
-	/************************************/
-	//NOTE: the signal handlers and the function/s that sets the handler should be found in siganls.c
-	//set your signal handlers here
-	/* add your code here */
 
 	/************************************/
+	struct sigaction new_sigint_action , old_sigint_action;
+	struct sigaction new_sigtstp_action, old_sigtstp_action;
+
+	new_sigint_action.sa_handler = ctrlCHandler; //the new handlers function - in signals.c
+	new_sigtstp_action.sa_hander = ctrlZHandler;
+	sigaction(SIGINT,&new_sigint_action,&old_sigint_action );
+	sigaction(SIGTSTP,&new_sigtstp_action,&old_sigtstp_action );
 
 	/************************************/
-
 
 
 	bool BGFlag = false;

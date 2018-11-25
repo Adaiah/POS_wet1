@@ -210,7 +210,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 				waited_pid = getLastBGFromJobs(jobs);
 				std::cout<<getNameFromJobs(jobs, atoi(args[1]))<<std::endl;
 				}
-			pid_t done = waitpid(waited_pid, NULL, 0 );
+			pid_t done = waitpid(waited_pid, NULL , WUNTRACED);
 			if (done > 0)
 				removeJob(jobs, done);
 			else if (done < 0) //TODO : check about the c-Z/C
@@ -298,18 +298,15 @@ void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag) {
 	int pID;
 	switch (pID = fork()) {
 		case -1:
-			// Add your code here (error)
 			perror("smash error: > ");
 		case 0 :
 			// Child Process
 			setpgrp();
-			// Add your code here (execute an external command)
 			execve(cmdString, args, NULL);
 			perror("smash error: > ");
 		default:
-			// Add your code here
 			if (BGFlag == 0) //if it is BG
-				waitpid(pID, NULL, 0);
+				waitpid(pID, NULL, WUNTRACED); //WUNTRACED - if the child process finished, killed or stopped via SIGTSTP
 	}
 }
 
