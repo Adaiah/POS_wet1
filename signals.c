@@ -7,3 +7,5 @@
    Synopsis: handle the Control-C */
 #include "signals.h"
 
+void ctrlZHandler(int signum);
+void ctrlCHandler(int signum);

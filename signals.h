@@ -9,6 +9,7 @@
 #include <signal.h>
 
 
-
+void ctrlZHandler(int signum);
+void ctrlCHandler(int signum);
 #endif
 

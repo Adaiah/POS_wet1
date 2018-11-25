@@ -26,5 +26,5 @@ typedef struct command {
 int ExeComp(char* lineSize);
 int BgCmd(char* lineSize, void* jobs, bool* BGFlag);
 int ExeCmd(void* jobs, char* lineSize, char* cmdString, bool BGFlag);
-void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag);
+void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag, void* jobs);
 #endif

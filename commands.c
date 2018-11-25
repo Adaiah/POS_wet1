@@ -203,7 +203,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 			pid_t waited_pid;
 			if (num_arg == 1){ // brings specific process to the foreground
 				waited_pid = getPidFromJobs(jobs, atoi(args[1]));
-				if(isJobStopped(jobs,atoi(args[1])))
+				if(isJobStopped(jobs,atoi(args[1]))) // check if the process was stopped by SIGTSTP
 					sendSignal(SIGCONT, waited_pid, DO_PRINT);
 			}
 			else{ //bring the last process in the BG to the FG
@@ -278,7 +278,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 	/*************************************************/
 	else // external command
 	{
- 		ExeExternal(args, cmdString, BGFlag);
+ 		ExeExternal(args, cmdString, BGFlag, jobs);
 	 	return 0;
 	}
 	if (illegal_cmd == true)
@@ -294,8 +294,9 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 // Parameters: external command arguments, external command string
 // Returns: void
 //**************************************************************************************
-void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag) {
+void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag, void* jobs) {
 	int pID;
+	std::vector<job_command>& v = *static_cast<std::vector<job_command>*>(jobs);
 	switch (pID = fork()) {
 		case -1:
 			perror("smash error: > ");
@@ -305,8 +306,15 @@ void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag) {
 			execve(cmdString, args, NULL);
 			perror("smash error: > ");
 		default:
-			if (BGFlag == 0) //if it is BG
-				waitpid(pID, NULL, WUNTRACED); //WUNTRACED - if the child process finished, killed or stopped via SIGTSTP
+			if (BGFlag == 0) {//if it is not in BG
+				waitpid(pID, NULL,
+						WUNTRACED); //WUNTRACED - if the child process finished, killed or stopped via SIGTSTP
+			}
+			else{ //if it is indeed in the BG
+				//need to update the pid in the jobs list
+				std::vector<job_command>::iterator it = v.end()-1; //the last in the list
+				it->PID = pID;
+			}
 	}
 }
 

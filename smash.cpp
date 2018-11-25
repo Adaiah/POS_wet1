@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	struct sigaction new_sigtstp_action, old_sigtstp_action;
 
 	new_sigint_action.sa_handler = ctrlCHandler; //the new handlers function - in signals.c
-	new_sigtstp_action.sa_hander = ctrlZHandler;
+	new_sigtstp_action.sa_handler = ctrlZHandler;
 	sigaction(SIGINT,&new_sigint_action,&old_sigint_action );
 	sigaction(SIGTSTP,&new_sigtstp_action,&old_sigtstp_action );
 
