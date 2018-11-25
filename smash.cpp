@@ -28,7 +28,7 @@ char lineSize[MAX_LINE_SIZE];
 
 // Init globals 
 int paretPid;
-string prevDir;
+bool BGFlag = false;
 
 //**************************************************************************************
 // function name: main
@@ -36,22 +36,23 @@ string prevDir;
 //**************************************************************************************
 int main(int argc, char *argv[])
 {
-    char cmdString[MAX_LINE_SIZE];
+    char cmdString[MAX_LINE_SIZE]; 	   
 
+	
+	//signal declaretions
+	//NOTE: the signal handlers and the function/s that sets the handler should be found in siganls.c
+	 /* add your code here */
+	
+	/************************************/
+	//NOTE: the signal handlers and the function/s that sets the handler should be found in siganls.c
+	//set your signal handlers here
+	/* add your code here */
 
 	/************************************/
-	struct sigaction new_sigint_action , old_sigint_action;
-	struct sigaction new_sigtstp_action, old_sigtstp_action;
-
-	new_sigint_action.sa_handler = ctrlCHandler; //the new handlers function - in signals.c
-	new_sigtstp_action.sa_handler = ctrlZHandler;
-	sigaction(SIGINT,&new_sigint_action,&old_sigint_action );
-	sigaction(SIGTSTP,&new_sigtstp_action,&old_sigtstp_action );
 
 	/************************************/
 
-
-	bool BGFlag = false;
+	paretPid=getpid();
 	L_Fg_Cmd =(char*)malloc(sizeof(char)*(MAX_LINE_SIZE+1));
 	if (L_Fg_Cmd == NULL) 
 			exit (-1); 
@@ -63,12 +64,23 @@ int main(int argc, char *argv[])
 		fgets(lineSize, MAX_LINE_SIZE, stdin);
 		strcpy(cmdString, lineSize);    	
 		cmdString[strlen(lineSize)-1]='\0';
-					// perform a complicated Command
+					
+		//add command to history queue
+		if (history.size()<=50)
+		{
+			history.push(cmdString);
+		}
+		else{
+			history.pop();
+			history.push(cmdString);
+		}
+		
+			// perform a complicated Command
 		if(!ExeComp(lineSize)) continue; 
 					// background command	
-	 	if(!BgCmd(lineSize, jobs, &BGFlag)) continue;
+	 	if(!BgCmd(lineSize,(void*) jobs)) continue; 
 					// built in commands
-		ExeCmd(jobs, lineSize, cmdString, BGFlag);
+		ExeCmd((void*)jobs, lineSize, cmdString);
 		
 		/* initialize for next line read*/
 		lineSize[0]='\0';
