@@ -7,7 +7,7 @@
 #include "signals.h"
 
 extern pid_t fgPid;
-extern string fg_name;
+extern std::string fg_name;
 void ctrlCHandler(int signum);
 
 

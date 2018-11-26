@@ -101,7 +101,7 @@ int getNumOfJobs(){
 void removeJob(pid_t pid){
 	for(std::vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
 		if (it->PID == pid)
-			v.erase(it);
+			jobs.erase(it);
 	}
 	int i = 1;
 	for(std::vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
@@ -120,9 +120,9 @@ pid_t findLastStopped()
 {
 	for (vector<job_command>::iterator it = jobs.end();it!=(jobs.begin()--);it--)
 	{
-		if(*it.status=true) //if curr location is stopped
+		if(it->status=true) //if curr location is stopped
 		{
-			return *it.PID;
+			return it->PID;
 		}
 	}
 	return NULL;
@@ -138,7 +138,7 @@ pid_t getLastBGFromJobs()
 {
 	vector<job_command>::iterator it = jobs.end();
 	it--;
-	return *it.PID;
+	return it->PID;
 }
 
 //********************************************
@@ -151,7 +151,7 @@ int getCommandID(pid_t curr_pid)
 {
 	for(vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
 		if (it->PID == curr_pid)
-			return *it.comm_id;
+			return it->comm_id;
 	}
 	return 0;
 }
@@ -252,8 +252,10 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 			printf("smash error: > too many arguments \n");
 			return 0;
 		}
-		cout << getcwd();
-
+		char cwd[256];
+		if (getcwd(cwd, sizeof(cwd))== NULL)
+			perror("smash error: > ");
+		cout <<cwd <<endl;
 	}
 	
 	/*************************************************/
@@ -314,7 +316,7 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 			fg_name = cmdString;
 			pid_t done = waitpid(waited_pid, &waited_status , WUNTRACED);
 			if ((done > 0) && WIFEXITED(waited_status))
-				removeJob(jobs, done);
+				removeJob(done);
 			else if (done < 0)
 				perror("smash error: > ");
 		}
@@ -328,10 +330,10 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 			return 0;
 		}
 		else {
-			pid_t resume_pid
+			pid_t resume_pid;
 			if(num_arg==0)// no parameters resume last stopped job
 			{
-				resume_pid=findLastStopped()//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				resume_pid=findLastStopped();//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				if(resume_pid==NULL)// no stopped jobs
 				{
 					cout<< "There are no stopped commands" <<endl;
@@ -340,13 +342,13 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 				else
 				{
 					int cmd_num=getCommandID(resume_pid);//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-					vector<job_command>job[cmd_num].status=false; //change from stopped
+					jobs[cmd_num].status=false; //change from stopped
 					sendSignal(SIGCONT, resume_pid, DO_PRINT);
 				}
 			}
 			else if (num_arg==1) // pid of command to run
 			{
-				resume_pid=getPidFromJobs(atoi(args[1]))
+				resume_pid=getPidFromJobs(atoi(args[1]));
 				if(resume_pid < 0) //command not found
 				{
 					cout<< "command not found" <<endl;
@@ -424,7 +426,7 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 			perror("smash error: > ");
 		}
 		else
-			cout<< arg[1] << " has been renamed to " << arg[2]<<endl;
+			cout<< args[1] << " has been renamed to " << args[2]<<endl;
 
 	}
 	/*************************************************/
@@ -493,7 +495,7 @@ void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag) {
 				pid_t done = waitpid(pID, &status_child,
 						WUNTRACED); //WUNTRACED - if the child process finished, killed or stopped via SIGTSTP
 				if((done > 0 ) && WIFEXITED(status_child))
-					removeJob(jobs,done);
+					removeJob(done);
 				else if (done <0){
 					perror("smash error: > ");
 				}
@@ -537,8 +539,8 @@ int BgCmd(char* lineSize, bool* BGFlag)
 	if (lineSize[strlen(lineSize)-2] == '&')
 	{
 		lineSize[strlen(lineSize)-2] = '\0';
-		addNewJob(0,false,strtok(lineSize, delimiters))
-		BGFlag=true;
+		addNewJob(0,false,strtok(lineSize, delimiters));
+		*BGFlag=true;
 	}
 	return -1;
 }

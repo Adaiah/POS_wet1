@@ -12,6 +12,7 @@
 #include <string>
 #include <errno.h>
 #include <vector>
+#include <queue>
 #define MAX_LINE_SIZE 80
 #define MAX_ARG 20
 #define DO_PRINT 1
@@ -23,7 +24,7 @@ typedef struct command {
 	time_t entry_time;
 	bool status; // stopped or not
 }job_command, *pjob_command;
-void addNewJob(pid_t pid , bool isStopped, string name);
+void addNewJob(pid_t pid , bool isStopped, std::string name);
 int ExeComp(char* lineSize);
 int BgCmd(char* lineSize, bool* BGFlag);
 int ExeCmd(char* lineSize, char* cmdString, bool BGFlag);
