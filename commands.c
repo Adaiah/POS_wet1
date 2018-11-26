@@ -90,20 +90,6 @@ int getNumOfJobs(void* jobs){
 	return v.size();
 }
 
-
-//********************************************
-// function name: getLastBGFromJobs
-// Description: get the pid name from the jobs list
-// Parameters: pointer to jobs, the number in the jobs list
-// Returns: the name of the process
-//**************************************************************************************
-pid_t getLastBGFromJobs(void* jobs) {
-	std::vector <job_command> &v = *static_cast<std::vector <job_command> *>(jobs);
-	std::vector<job_command>::iterator it = v.end() - 1;
-	return it->PID;
-}
-
-
 //********************************************
 // function name: getNumOfJobs
 // Description: return the number of BG process in the jobs list
