@@ -7,7 +7,8 @@
 #include "signals.h"
 
 extern pid_t fgPid;
-void ctrlZHandler(int signum);
+extern string fg_name;
+void ctrlCHandler(int signum);
 
 
 
@@ -19,13 +20,13 @@ void ctrlZHandler(int signum);
 // Parameters:
 // Returns: void
 //**************************************************************************************
-void ctrlCHandler(int signum){
+void ctrlZHandler(int signum){
     int stopped_status = 0;
     if(fgPid>0){
         sendSignal(SIGTSTP ,fgPid,DO_PRINT);
         waitpid(fgPid,&stopped_status,WUNTRACED);
         if (WIFSTOPPED(stopped_status)){ //check if the child process stopped
-            addNewJob(fgPid, true);
+            addNewJob(fgPid, true , fg_name);
         }
         fgPid = 0;
     }

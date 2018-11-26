@@ -22,11 +22,11 @@ typedef struct command {
 	pid_t PID;
 	time_t entry_time;
 	bool status; // stopped or not
-	bool built_in; // Yes=true Nם=false
 }job_command, *pjob_command;
-void addNewJob(pid_t pid , bool isStopped);
+void addNewJob(pid_t pid , bool isStopped, string name);
 int ExeComp(char* lineSize);
-int BgCmd(char* lineSize, void* jobs, bool* BGFlag);
-int ExeCmd(void* jobs, char* lineSize, char* cmdString, bool BGFlag);
-void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag, void* jobs);
+int BgCmd(char* lineSize, bool* BGFlag);
+int ExeCmd(char* lineSize, char* cmdString, bool BGFlag);
+void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag);
+int sendSignal(int signum, pid_t pid, bool print);
 #endif

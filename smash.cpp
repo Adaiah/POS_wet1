@@ -16,18 +16,19 @@ main file. This file contains the main function of smash
 #include "signals.h"
 #define MAX_LINE_SIZE 80
 #define MAXARGS 20
-#define MAXJOBS 100 // is this ok??!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#define MAXJOBS 100
 #define MAXHISTORY 50
 
 using namespace std;
 
 char* L_Fg_Cmd;
-vector<job_command>* jobs= new vector<job_command>; //This represents the list of jobs. Please change to a preferred type (e.g array of char*)
+vector<job_command> jobs;
 queue<string> history;
 char lineSize[MAX_LINE_SIZE]; 	
 
 // Init globals 
-pid_t fgPid=0;
+pid_t fgPid = 0;
+string fg_name= "/0";
 //**************************************************************************************
 // function name: main
 // Description: main function of smash. get command from user and calls command functions
@@ -61,12 +62,23 @@ int main(int argc, char *argv[])
 		fgets(lineSize, MAX_LINE_SIZE, stdin);
 		strcpy(cmdString, lineSize);    	
 		cmdString[strlen(lineSize)-1]='\0';
+
+		//add command to history queue also holds problematic commands
+		if (history.size()<=50)
+		{
+			history.push(cmdString);
+		}
+		else{
+			history.pop();
+			history.push(cmdString);
+		}
+
 					// perform a complicated Command
 		if(!ExeComp(lineSize)) continue; 
 					// background command	
-	 	if(!BgCmd(lineSize, jobs, &BGFlag)) continue;
+	 	if(!BgCmd(lineSize, &BGFlag)) continue;
 					// built in commands
-		ExeCmd(jobs, lineSize, cmdString, BGFlag);
+		ExeCmd(lineSize, cmdString, BGFlag);
 		
 		/* initialize for next line read*/
 		lineSize[0]='\0';

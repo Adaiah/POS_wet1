@@ -3,8 +3,11 @@
 #include "commands.h"
 #include <linux/limits.h>
 
-
+using namespace std ;
 extern pid_t fgPid;
+extern string fg_name;
+extern vector<job_command> jobs;
+extern queue<string> history;
 
 //********************************************
 // function name: printJobEntry
@@ -29,15 +32,14 @@ void printJobEntry(pjob_command job_entry){
 // Parameters: pointer to jobs
 // Returns: void
 //**************************************************************************************
-void removeFinishedJobs(void* jobs){
+void removeFinishedJobs(){
 	//remove all the zombies from jobs list
-	std::vector<job_command>& v = *static_cast<std::vector<job_command>*>(jobs);
-	for(std::vector<job_command>::iterator it = v.begin(); it != v.end(); ++it) {
+	for(std::vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
 		if(waitpid(it->PID, NULL, WNOHANG) > 0 )
-			v.erase(it);
+			jobs.erase(it);
 	}
 	int i = 1;
-	for(std::vector<job_command>::iterator it = v.begin(); it != v.end(); ++it) {
+	for(std::vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
 		it->comm_id = i;
 	}
 }
@@ -48,9 +50,10 @@ void removeFinishedJobs(void* jobs){
 // Parameters: pointer to jobs, the number in the jobs list
 // Returns: the pid
 //**************************************************************************************
-pid_t getPidFromJobs(void* jobs, int id_comm){
-	std::vector<job_command>& v = *static_cast<std::vector<job_command>*>(jobs);
-	std::vector<job_command>::iterator it = v.begin()+id_comm-1;
+pid_t getPidFromJobs(int id_comm){
+	if((id_comm<1) || (id_comm > jobs.size()))
+		return -1;
+	std::vector<job_command>::iterator it = jobs.begin()+id_comm-1;
 	return it->PID;
 }
 
@@ -60,9 +63,8 @@ pid_t getPidFromJobs(void* jobs, int id_comm){
 // Parameters: pointer to jobs, the number in the jobs list
 // Returns: 1 - if stopped, 0-if not
 //**************************************************************************************
-bool isJobStopped(void* jobs ,int id_comm) {
-	std::vector <job_command> &v = *static_cast<std::vector <job_command> *>(jobs);
-	std::vector<job_command>::iterator it = v.begin() + id_comm - 1;
+bool isJobStopped(int id_comm) {
+	std::vector<job_command>::iterator it = jobs.begin() + id_comm - 1;
 	return it->status;
 }
 
@@ -72,9 +74,10 @@ bool isJobStopped(void* jobs ,int id_comm) {
 // Parameters: pointer to jobs, the number in the jobs list
 // Returns: the name of the process
 //**************************************************************************************
-std::string getNameFromJobs(void* jobs, int id_comm){
-	std::vector <job_command> &v = *static_cast<std::vector <job_command> *>(jobs);
-	std::vector<job_command>::iterator it = v.begin() + id_comm - 1;
+std::string getNameFromJobs(int id_comm){
+	if((id_comm<1) || (id_comm > jobs.size()))
+		return NULL;
+	std::vector<job_command>::iterator it = jobs.begin() + id_comm - 1;
 	return it->name;
 }
 
@@ -85,27 +88,90 @@ std::string getNameFromJobs(void* jobs, int id_comm){
 // Parameters: pointer to jobs
 // Returns: the number of BG process
 //**************************************************************************************
-int getNumOfJobs(void* jobs){
-	std::vector <job_command> &v = *static_cast<std::vector <job_command> *>(jobs);
-	return v.size();
+int getNumOfJobs(){
+	return jobs.size();
 }
 
 //********************************************
-// function name: getNumOfJobs
-// Description: return the number of BG process in the jobs list
-// Parameters: pointer to jobs
-// Returns: the number of BG process
+// function name: removeJob
+// Description: !!!!!!!!!!!!!!!!!!!!!!!!!!
+// Parameters: pointer to jobs, pid of process to remove
+// Returns: N/A
 //**************************************************************************************
-void removeJob(void* jobs, pid_t pid){
-	std::vector<job_command>& v = *static_cast<std::vector<job_command>*>(jobs);
-	for(std::vector<job_command>::iterator it = v.begin(); it != v.end(); ++it) {
+void removeJob(pid_t pid){
+	for(std::vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
 		if (it->PID == pid)
 			v.erase(it);
 	}
 	int i = 1;
-	for(std::vector<job_command>::iterator it = v.begin(); it != v.end(); ++it) {
+	for(std::vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
 		it->comm_id = i;
 	}
+}
+
+
+//********************************************
+// function name: findLastStopped
+// Description: finds the last command that was stopped
+// Parameters: pointer to jobs
+// Returns: returns the pid of the command last stopped
+//**************************************************************************************
+pid_t findLastStopped()
+{
+	for (vector<job_command>::iterator it = jobs.end();it!=(jobs.begin()--);it--)
+	{
+		if(*it.status=true) //if curr location is stopped
+		{
+			return *it.PID;
+		}
+	}
+	return NULL;
+}
+
+//********************************************
+// function name: getLastBGFromJobs
+// Description: returns the last command that runs in the background
+// Parameters: pointer to jobs
+// Returns: pid of command to run in fg
+//**************************************************************************************
+pid_t getLastBGFromJobs()
+{
+	vector<job_command>::iterator it = jobs.end();
+	it--;
+	return *it.PID;
+}
+
+//********************************************
+// function name: getCommandID
+// Description: returns the number of command in the job vector
+// Parameters: jobs vector, curr_pid pid of the command of interest
+// Returns: number of command in vector
+//**************************************************************************************
+int getCommandID(pid_t curr_pid)
+{
+	for(vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
+		if (it->PID == curr_pid)
+			return *it.comm_id;
+	}
+	return 0;
+}
+//********************************************
+// function name: addNewJob
+// Description: adding new job to the BG job list
+// Parameters: pid of the new job, and if it was stopped
+// Returns: void
+//**************************************************************************************
+void addNewJob(pid_t pid , bool isStopped, string name ){
+	pid_t new_pid = 0;
+	job_command curr_job;
+	if(pid > 0)
+		new_pid = pid;
+	curr_job.name= name;
+	curr_job.comm_id =  jobs.size()+1;
+	curr_job.PID = new_pid;
+	time(&curr_job.entry_time);
+	curr_job.status = isStopped;
+	jobs.push_back(curr_job);
 }
 
 //********************************************
@@ -114,11 +180,10 @@ void removeJob(void* jobs, pid_t pid){
 // Parameters: pid of the new job, and if it was stopped
 // Returns: void
 //**************************************************************************************
-void addNewJob(pid_t pid , bool isStopped){
-	pid_t new_pid = 0; // TODO: think how to get the jobs list...
-	if(pid > 0)
-		new_pid = pid;
-	//... TODO: add the code of Adaiah
+int sendSignal(int signum, pid_t pid, bool print){
+	//TODO: print the signal
+	//TODO: check if SIGTSTP wwas sent to a BG command and turn on the status flag.
+	//TODO: return (kill function)
 }
 
 //********************************************
@@ -127,9 +192,9 @@ void addNewJob(pid_t pid , bool isStopped){
 // Parameters: pointer to jobs, command string
 // Returns: 0 - success,1 - failure
 //**************************************************************************************
-int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
+int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 {
-	char* cmd; 
+	char* cmd;
 	char* args[MAX_ARG];
 	char pwd[MAX_LINE_SIZE];
 	char* delimiters = " \t\n";
@@ -182,19 +247,41 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 	/*************************************************/
 	else if (!strcmp(cmd, "pwd")) 
 	{
-		
+		if (num_arg > 1) //too many arguments
+		{
+			printf("smash error: > too many arguments \n");
+			return 0;
+		}
+		cout << getcwd();
+
 	}
 	
 	/*************************************************/
-	else if (!strcmp(cmd, "mkdir"))
+	else if (!strcmp(cmd, "history"))
 	{
- 		
+ 		int k=0;
+		string temp;
+		if (num_arg > 1) //too many arguments
+		{
+			printf("smash error: > too many arguments \n");
+			return 0;
+		}
+		queue<string> printQueue(history);
+		k=history.size();
+		for(int i=0; i<k; i++)
+		{
+			cout<< history.front()<< endl;
+			temp=history.front();
+			history.pop();
+			history.push(temp);
+		}
+
 	}
 	/*************************************************/
 	
 	else if (!strcmp(cmd, "jobs")) 
 	{
- 		removeFinishedJobs(jobs);
+ 		removeFinishedJobs();//TODO: add the jobs printing
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "showpid")) 
@@ -206,7 +293,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "fg")) 
-	{
+	{	//TODO: add when the id_comm is not valid
 		// brings the wanted or the last stopped command to the foreground
 		// make the parent process wait to his specific child
 		if (num_arg > 1) // if there are too many arguments
@@ -215,15 +302,16 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 			pid_t waited_pid;
 			int waited_status;
 			if (num_arg == 1) { // brings specific process to the foreground
-				waited_pid = getPidFromJobs(jobs, atoi(args[1]));
-				if (isJobStopped(jobs, atoi(args[1]))) // check if the process was stopped by SIGTSTP
+				waited_pid = getPidFromJobs(atoi(args[1]));
+				if (isJobStopped(atoi(args[1]))) // check if the process was stopped by SIGTSTP
 					sendSignal(SIGCONT, waited_pid, DO_PRINT);
 			}
 			else { //bring the last process in the BG to the FG
-				waited_pid = getLastBGFromJobs(jobs);
-				std::cout << getNameFromJobs(jobs, atoi(args[1])) << std::endl;
+				waited_pid = getLastBGFromJobs();
+				std::cout << getNameFromJobs(atoi(args[1])) << std::endl;
 			}
 			fgPid = waited_pid;
+			fg_name = cmdString;
 			pid_t done = waitpid(waited_pid, &waited_status , WUNTRACED);
 			if ((done > 0) && WIFEXITED(waited_status))
 				removeJob(jobs, done);
@@ -234,7 +322,44 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 	/*************************************************/
 	else if (!strcmp(cmd, "bg")) 
 	{
-  		
+		if(num_arg>1)
+		{
+			cout<< "wrong number of arguments"<<endl;
+			return 0;
+		}
+		else {
+			pid_t resume_pid
+			if(num_arg==0)// no parameters resume last stopped job
+			{
+				resume_pid=findLastStopped()//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				if(resume_pid==NULL)// no stopped jobs
+				{
+					cout<< "There are no stopped commands" <<endl;
+					return 0;
+				}
+				else
+				{
+					int cmd_num=getCommandID(resume_pid);//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+					vector<job_command>job[cmd_num].status=false; //change from stopped
+					sendSignal(SIGCONT, resume_pid, DO_PRINT);
+				}
+			}
+			else if (num_arg==1) // pid of command to run
+			{
+				resume_pid=getPidFromJobs(atoi(args[1]))
+				if(resume_pid < 0) //command not found
+				{
+					cout<< "command not found" <<endl;
+					return 0;
+				}
+				else
+				{
+					jobs[atoi(args[1])].status=false; //change from stopped
+					sendSignal(SIGCONT, resume_pid, DO_PRINT);
+				}
+			}
+		}
+
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "quit"))
@@ -247,52 +372,95 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 				printf("smash error: > unknown argument in quit command \n");
    			}
    			else { //quit with kill
-				int num_of_jobs = getNumOfJobs(jobs);
+				int num_of_jobs = getNumOfJobs();
 				for (i = 1; i <= num_of_jobs; i++) {
 					time_t start_time, now;
 					pid_t waited_pid;
 					double elapsed;
 
-					pid_t current_pid = getPidFromJobs(jobs, i);
-					std::string job_name = getNameFromJobs(jobs, i);
+					pid_t current_pid = getPidFromJobs(i);
+					string job_name = getNameFromJobs(i);
 
 					sendSignal(SIGTERM, current_pid, DONT_PRINT);
-					std::cout<<"["<<i<<"] "<<job_name<<" - Sending SIGTERM... ";
+					cout << "[" << i << "] " << job_name << " - Sending SIGTERM... ";
 
 					time(&start_time);
 					do {   //wait 5 seconds for the process to end
 						time(&now);
-						elapsed = difftime(now,start_time);
-						waited_pid = waitpid(current_pid ,NULL , WNOHANG);
-					}while ((elapsed < 5) && (waited_pid == 0) );
+						elapsed = difftime(now, start_time);
+						waited_pid = waitpid(current_pid, NULL, WNOHANG);
+					} while ((elapsed < 5) && (waited_pid == 0));
 
-					if (waited_pid < 0 ) //if the wait got an error
+					if (waited_pid < 0) //if the wait got an error
 						perror("smash error: > ");
-					else if (waited_pid == 0){ //if the process didn't end in 5sec
-						std::cout<<"(5 sec passed) Sending SIGKILL... ";
+					else if (waited_pid == 0) { //if the process didn't end in 5sec
+						cout << "(5 sec passed) Sending SIGKILL... ";
 						sendSignal(SIGKILL, current_pid, DONT_PRINT);
 						if (waitpid(current_pid, NULL, 0) > 0)
-							std::cout<<"Done."<<std::endl;
+							cout << "Done." << endl;
 						else
 							perror("smash error: > ");
-					}
-					else{ //if the process did end
-						std::cout<<"Done."<<std::endl;
+					} else { //if the process did end
+						cout << "Done." << endl;
 					}
 				}
 			}
-			delete static_cast<std::vector<job_command>*>(jobs);
 			exit(0);
    		}
    		else{ //quit without kill
-   			delete static_cast<std::vector<job_command>*>(jobs);
    			exit(0);
    		}
+	}
+		/*************************************************/
+	else if (!strcmp(cmd, "mv"))
+	{
+		if(num_arg!=1)
+		{
+			cout<< "wrong number of arguments"<<endl;
+			return 0;
+		}
+		if(rename(args[1],args[2])<0)
+		{
+			perror("smash error: > ");
+		}
+		else
+			cout<< arg[1] << " has been renamed to " << arg[2]<<endl;
+
+	}
+	/*************************************************/
+	else if (!strcmp(cmd, "kill"))//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	{  //todo: if kill sends SIGTSTP to BG command needs to flag it as stopped.
+		if(num_arg<2)
+		{
+			cout<< "wrong number of arguments"<<endl;
+			return 0;
+		}
+		else if (atoi(args[1])>0)
+		{
+			cout<< "bad signum parameter"<<endl;
+		}
+		else{
+			int signum=-1*atoi(args[1]);
+			int cmd_id=atoi(args[2]);
+			if(cmd_id<0 || cmd_id>getNumOfJobs())
+			{
+				cout<< "smash error:> kill" << cmd_id << " - job does not exist"<< endl;
+			}
+			else {
+				pid_t sendSig2PID=getPidFromJobs(cmd_id);
+				if (!kill(sendSig2PID,signum)) // if error in signal sending
+				{
+					cout<< "smash error:> kill" << cmd_id << " cannot send signal"<< endl;
+				}
+			}
+		}
+
+
 	}
 	/*************************************************/
 	else // external command
 	{
- 		ExeExternal(args, cmdString, BGFlag, jobs);
+ 		ExeExternal(args, cmdString, BGFlag);
 	 	return 0;
 	}
 	if (illegal_cmd == true)
@@ -308,9 +476,8 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 // Parameters: external command arguments, external command string
 // Returns: void
 //**************************************************************************************
-void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag, void* jobs) {
+void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag) {
 	int pID;
-	std::vector<job_command>& v = *static_cast<std::vector<job_command>*>(jobs);
 	switch (pID = fork()) {
 		case -1:
 			perror("smash error: > ");
@@ -334,7 +501,7 @@ void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag, void* jobs) 
 			}
 			else{ //if it is indeed in the BG
 				//need to update the pid in the jobs list
-				std::vector<job_command>::iterator it = v.end()-1; //the last in the list
+				std::vector<job_command>::iterator it = jobs.end()-1; //the last in the list
 				it->PID = pID;
 			}
 	}
@@ -352,11 +519,7 @@ int ExeComp(char* lineSize)
 	char *args[MAX_ARG];
     if ((strstr(lineSize, "|")) || (strstr(lineSize, "<")) || (strstr(lineSize, ">")) || (strstr(lineSize, "*")) || (strstr(lineSize, "?")) || (strstr(lineSize, ">>")) || (strstr(lineSize, "|&")))
     {
-		// Add your code here (execute a complicated command)
-					
-		/* 
-		your code
-		*/
+		return 0;
 	} 
 	return -1;
 }
@@ -366,21 +529,16 @@ int ExeComp(char* lineSize)
 // Parameters: command string, pointer to jobs
 // Returns: 0- BG command -1- if not
 //**************************************************************************************
-int BgCmd(char* lineSize, void* jobs, bool* BGFlag)
+int BgCmd(char* lineSize, bool* BGFlag)
 {
-
 	char* Command;
 	char* delimiters = " \t\n";
 	char *args[MAX_ARG];
 	if (lineSize[strlen(lineSize)-2] == '&')
 	{
 		lineSize[strlen(lineSize)-2] = '\0';
-		// Add your code here (execute a in the background)
-					
-		/* 
-		your code
-		*/
-		
+		addNewJob(0,false,strtok(lineSize, delimiters))
+		BGFlag=true;
 	}
 	return -1;
 }
