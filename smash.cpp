@@ -27,9 +27,7 @@ queue<string> history;
 char lineSize[MAX_LINE_SIZE]; 	
 
 // Init globals 
-int paretPid;
-string prevDir;
-
+pid_t fgPid=0;
 //**************************************************************************************
 // function name: main
 // Description: main function of smash. get command from user and calls command functions

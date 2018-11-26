@@ -14,6 +14,8 @@
 #include <vector>
 #define MAX_LINE_SIZE 80
 #define MAX_ARG 20
+#define DO_PRINT 1
+#define DONT_PRINT 0
 typedef struct command {
 	std::string name;
 	int comm_id;
@@ -22,7 +24,7 @@ typedef struct command {
 	bool status; // stopped or not
 	bool built_in; // Yes=true Nם=false
 }job_command, *pjob_command;
-
+void addNewJob(pid_t pid , bool isStopped);
 int ExeComp(char* lineSize);
 int BgCmd(char* lineSize, void* jobs, bool* BGFlag);
 int ExeCmd(void* jobs, char* lineSize, char* cmdString, bool BGFlag);

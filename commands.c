@@ -2,10 +2,9 @@
 //********************************************
 #include "commands.h"
 #include <linux/limits.h>
-#define DO_PRINT 1
-#define DONT_PRINT 0
 
 
+extern pid_t fgPid;
 
 //********************************************
 // function name: printJobEntry
@@ -91,6 +90,20 @@ int getNumOfJobs(void* jobs){
 	return v.size();
 }
 
+
+//********************************************
+// function name: getLastBGFromJobs
+// Description: get the pid name from the jobs list
+// Parameters: pointer to jobs, the number in the jobs list
+// Returns: the name of the process
+//**************************************************************************************
+pid_t getLastBGFromJobs(void* jobs) {
+	std::vector <job_command> &v = *static_cast<std::vector <job_command> *>(jobs);
+	std::vector<job_command>::iterator it = v.end() - 1;
+	return it->PID;
+}
+
+
 //********************************************
 // function name: getNumOfJobs
 // Description: return the number of BG process in the jobs list
@@ -107,6 +120,19 @@ void removeJob(void* jobs, pid_t pid){
 	for(std::vector<job_command>::iterator it = v.begin(); it != v.end(); ++it) {
 		it->comm_id = i;
 	}
+}
+
+//********************************************
+// function name: addNewJob
+// Description: adding new job to the BG job list
+// Parameters: pid of the new job, and if it was stopped
+// Returns: void
+//**************************************************************************************
+void addNewJob(pid_t pid , bool isStopped){
+	pid_t new_pid = 0; // TODO: think how to get the jobs list...
+	if(pid > 0)
+		new_pid = pid;
+	//... TODO: add the code of Adaiah
 }
 
 //********************************************
@@ -201,19 +227,21 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString ,bool BGFlag)
 			printf("smash error: > too many arguments \n");
 		else {
 			pid_t waited_pid;
-			if (num_arg == 1){ // brings specific process to the foreground
+			int waited_status;
+			if (num_arg == 1) { // brings specific process to the foreground
 				waited_pid = getPidFromJobs(jobs, atoi(args[1]));
-				if(isJobStopped(jobs,atoi(args[1]))) // check if the process was stopped by SIGTSTP
+				if (isJobStopped(jobs, atoi(args[1]))) // check if the process was stopped by SIGTSTP
 					sendSignal(SIGCONT, waited_pid, DO_PRINT);
 			}
-			else{ //bring the last process in the BG to the FG
+			else { //bring the last process in the BG to the FG
 				waited_pid = getLastBGFromJobs(jobs);
-				std::cout<<getNameFromJobs(jobs, atoi(args[1]))<<std::endl;
-				}
-			pid_t done = waitpid(waited_pid, NULL , WUNTRACED);
-			if (done > 0)
+				std::cout << getNameFromJobs(jobs, atoi(args[1])) << std::endl;
+			}
+			fgPid = waited_pid;
+			pid_t done = waitpid(waited_pid, &waited_status , WUNTRACED);
+			if ((done > 0) && WIFEXITED(waited_status))
 				removeJob(jobs, done);
-			else if (done < 0) //TODO : check about the c-Z/C
+			else if (done < 0)
 				perror("smash error: > ");
 		}
 	}
@@ -306,9 +334,17 @@ void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag, void* jobs) 
 			execve(cmdString, args, NULL);
 			perror("smash error: > ");
 		default:
-			if (BGFlag == 0) {//if it is not in BG
-				waitpid(pID, NULL,
+			if (BGFlag == 0) {//if it's in FG
+				int status_child;
+				fgPid = pID;
+				pid_t done = waitpid(pID, &status_child,
 						WUNTRACED); //WUNTRACED - if the child process finished, killed or stopped via SIGTSTP
+				if((done > 0 ) && WIFEXITED(status_child))
+					removeJob(jobs,done);
+				else if (done <0){
+					perror("smash error: > ");
+				}
+
 			}
 			else{ //if it is indeed in the BG
 				//need to update the pid in the jobs list

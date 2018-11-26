@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include "commands.h"
 
 
 void ctrlZHandler(int signum);
