@@ -8,7 +8,9 @@
 
 extern pid_t fgPid;
 extern std::string fg_name;
-void ctrlCHandler(int signum);
+void ctrlCHandler(int signum){
+    return;
+}
 
 
 
@@ -16,18 +18,21 @@ void ctrlCHandler(int signum);
 
 //**************************************************************************************
 // function name: ctrlZHandler
-// Description: the function handles the SIGNTSTP signal
+// Description: the function handles the SIGTSTP signal
 // Parameters:
 // Returns: void
 //**************************************************************************************
 void ctrlZHandler(int signum){
     int stopped_status = 0;
     if(fgPid>0){
-        sendSignal(SIGTSTP ,fgPid,DO_PRINT);
+        std::cout<<"debug1: "<<fgPid<<std::endl;
+        //sendSignal(SIGTSTP ,fgPid,DO_PRINT);
+        kill(fgPid,SIGTSTP);
         waitpid(fgPid,&stopped_status,WUNTRACED);
         if (WIFSTOPPED(stopped_status)){ //check if the child process stopped
             addNewJob(fgPid, true , fg_name);
         }
         fgPid = 0;
+        std::cout<<"debug2: "<<fgPid<<std::endl;
     }
 }

@@ -36,7 +36,7 @@ string fg_name= "/0";
 int main(int argc, char *argv[])
 {
     char cmdString[MAX_LINE_SIZE];
-
+	cout<<"version: 1.7"<<endl;
 
 	/************************************/
 	struct sigaction new_sigint_action , old_sigint_action;
@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
 
 	new_sigint_action.sa_handler = ctrlCHandler; //the new handlers function - in signals.c
 	new_sigtstp_action.sa_handler = ctrlZHandler;
-	sigaction(SIGINT,&new_sigint_action,&old_sigint_action );
 	sigaction(SIGTSTP,&new_sigtstp_action,&old_sigtstp_action );
+	sigaction(SIGINT,&new_sigint_action,&old_sigint_action );
 
 	/************************************/
 
@@ -56,12 +56,14 @@ int main(int argc, char *argv[])
 			exit (-1); 
 	L_Fg_Cmd[0] = '\0';
 	
-    	while (1)
-    	{
+	while (1)
+    {
+    	cout<<fgPid<<endl;
 	 	printf("smash > ");
 		fgets(lineSize, MAX_LINE_SIZE, stdin);
 		strcpy(cmdString, lineSize);    	
 		cmdString[strlen(lineSize)-1]='\0';
+		fg_name = cmdString;
 
 		//add command to history queue also holds problematic commands
 		if (history.size()<=50)

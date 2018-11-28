@@ -15,14 +15,14 @@ extern queue<string> history;
 // Parameters: pointer to job_command
 // Returns: void
 //**************************************************************************************
-void printJobEntry(pjob_command job_entry){
+void printJobEntry(job_command job_entry){
 	//the function prints a single job command entry
-	std::cout<<"["<<job_entry->comm_id<<"} "<<job_entry->name<<" "
-			 <<job_entry->PID<<" "<< difftime(time(NULL),job_entry->entry_time)<<" secs ";
-	if (job_entry->status)
-		std::cout<<"(stopped) "<<std::endl;
+	cout<<"["<<job_entry.comm_id<<"] "<<job_entry.name<<" "
+			 <<job_entry.PID<<" "<< difftime(time(NULL),job_entry.entry_time)<<" secs ";
+	if (job_entry.status)
+		cout<<"(stopped) "<<endl;
 	else
-	std::cout<<std::endl;
+	cout<<endl;
 }
 
 
@@ -48,7 +48,7 @@ void removeFinishedJobs(){
 // function name: getPidFromJobs
 // Description: get the pid number from the jobs list
 // Parameters: pointer to jobs, the number in the jobs list
-// Returns: the pid
+// Returns: the pid or -1 if job id is not found
 //**************************************************************************************
 pid_t getPidFromJobs(int id_comm){
 	if((id_comm<1) || (id_comm > jobs.size()))
@@ -184,6 +184,20 @@ int sendSignal(int signum, pid_t pid, bool print){
 	//TODO: print the signal
 	//TODO: check if SIGTSTP wwas sent to a BG command and turn on the status flag.
 	//TODO: return (kill function)
+	return 0 ;
+}
+
+
+//********************************************
+// function name: printJobs
+// Description: print the jobs list
+// Parameters: none
+// Returns: void
+//**************************************************************************************
+void printJobs(){
+	for(vector<job_command>::iterator it = jobs.begin(); it != jobs.end(); ++it) {
+		printJobEntry(*it);
+	}
 }
 
 //********************************************
@@ -217,29 +231,30 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 // ARE IN THIS CHAIN OF IF COMMANDS. PLEASE ADD
 // MORE IF STATEMENTS AS REQUIRED
 /*************************************************/
-	if (!strcmp(cmd, "cd") ) 
+	if (!strcmp(cmd, "cd") )
 	{
-
+		char currDir[PATH_MAX] = "/0";
+		getcwd(currDir, sizeof(currDir));
 	    // changes the Dir of the current folder
 		if(num_arg > 1 ) { //if the args are more than 1 (<path>)
 			printf("smash error: > too many arguments \n");
 		}
 		else if (!strcmp(args[1], "-")){
-				if(chdir(prevDir) == -1)
-						perror("smash error: > ");
-				else{
-					std::cout<<prevDir<<std::endl;
-					getcwd(prevDir , sizeof(prevDir));
+			if(chdir(prevDir) == -1)
+				perror("smash error: 1> ");
+			else{
+				std::cout<<prevDir<<std::endl;
+				strcpy(prevDir,currDir);
 				}
 			}
 			else{
 				if(chdir(args[1]) == -1)
 					if (errno == ENOENT)
-						printf("smash error: > \"%s\" - path not found\n", args[1]);
+						printf("smash error: 2> \"%s\" - path not found\n", args[1]);
 					else
-						perror("smash error: > ");
+						perror("smash error: 3> ");
 				else{
-					getcwd(prevDir , sizeof(prevDir));
+					strcpy(prevDir,currDir);
 				}
 			}
 	} 
@@ -254,7 +269,7 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 		}
 		char cwd[256];
 		if (getcwd(cwd, sizeof(cwd))== NULL)
-			perror("smash error: > ");
+			perror("smash error: 4> ");
 		cout <<cwd <<endl;
 	}
 	
@@ -283,7 +298,8 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 	
 	else if (!strcmp(cmd, "jobs")) 
 	{
- 		removeFinishedJobs();//TODO: add the jobs printing
+ 		removeFinishedJobs();
+ 		printJobs();
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "showpid")) 
@@ -305,6 +321,10 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 			int waited_status;
 			if (num_arg == 1) { // brings specific process to the foreground
 				waited_pid = getPidFromJobs(atoi(args[1]));
+				if(waited_pid < 0) { //id not found
+					printf("smash error: > job id was not found in the jobs list \n");
+					return 1;
+				}
 				if (isJobStopped(atoi(args[1]))) // check if the process was stopped by SIGTSTP
 					sendSignal(SIGCONT, waited_pid, DO_PRINT);
 			}
@@ -318,7 +338,7 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 			if ((done > 0) && WIFEXITED(waited_status))
 				removeJob(done);
 			else if (done < 0)
-				perror("smash error: > ");
+				perror("smash error: 5> ");
 		}
 	}
 	/*************************************************/
@@ -394,14 +414,14 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 					} while ((elapsed < 5) && (waited_pid == 0));
 
 					if (waited_pid < 0) //if the wait got an error
-						perror("smash error: > ");
+						perror("smash error: 7> ");
 					else if (waited_pid == 0) { //if the process didn't end in 5sec
 						cout << "(5 sec passed) Sending SIGKILL... ";
 						sendSignal(SIGKILL, current_pid, DONT_PRINT);
 						if (waitpid(current_pid, NULL, 0) > 0)
 							cout << "Done." << endl;
 						else
-							perror("smash error: > ");
+							perror("smash error: 8> ");
 					} else { //if the process did end
 						cout << "Done." << endl;
 					}
@@ -423,7 +443,7 @@ int ExeCmd(char* lineSize, char* cmdString ,bool BGFlag)
 		}
 		if(rename(args[1],args[2])<0)
 		{
-			perror("smash error: > ");
+			perror("smash error: 9> ");
 		}
 		else
 			cout<< args[1] << " has been renamed to " << args[2]<<endl;
@@ -482,12 +502,12 @@ void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag) {
 	int pID;
 	switch (pID = fork()) {
 		case -1:
-			perror("smash error: > ");
+			perror("smash error: 9> ");
 		case 0 :
 			// Child Process
 			setpgrp();
 			execve(cmdString, args, NULL);
-			perror("smash error: > ");
+			perror("smash error: 10> ");
 		default:
 			if (BGFlag == 0) {//if it's in FG
 				int status_child;
@@ -497,7 +517,7 @@ void ExeExternal(char *args[MAX_ARG], char* cmdString, bool BGFlag) {
 				if((done > 0 ) && WIFEXITED(status_child))
 					removeJob(done);
 				else if (done <0){
-					perror("smash error: > ");
+					perror("smash error: 11> ");
 				}
 
 			}
