@@ -19,7 +19,7 @@
 #define DONT_PRINT 0
 typedef struct command {
 	std::string name;
-	int comm_id;
+	unsigned int comm_id;
 	pid_t PID;
 	time_t entry_time;
 	bool status; // stopped or not

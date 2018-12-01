@@ -36,7 +36,7 @@ string fg_name= "/0";
 int main(int argc, char *argv[])
 {
     char cmdString[MAX_LINE_SIZE];
-	cout<<"version: 1.7"<<endl;
+	cout<<"version: 4.4"<<endl; //todo: remove
 
 	/************************************/
 	struct sigaction new_sigint_action , old_sigint_action;
@@ -55,37 +55,43 @@ int main(int argc, char *argv[])
 	if (L_Fg_Cmd == NULL) 
 			exit (-1); 
 	L_Fg_Cmd[0] = '\0';
-	
-	while (1)
-    {
-    	cout<<fgPid<<endl;
-	 	printf("smash > ");
-		fgets(lineSize, MAX_LINE_SIZE, stdin);
-		strcpy(cmdString, lineSize);    	
-		cmdString[strlen(lineSize)-1]='\0';
-		fg_name = cmdString;
 
-		//add command to history queue also holds problematic commands
-		if (history.size()<=50)
+	try {
+
+		while (1)
 		{
-			history.push(cmdString);
-		}
-		else{
-			history.pop();
-			history.push(cmdString);
-		}
+			cout<<fgPid<<endl;
+			printf("smash > ");
+			fgets(lineSize, MAX_LINE_SIZE, stdin);
+			strcpy(cmdString, lineSize);
+			cmdString[strlen(lineSize)-1]='\0';
+			fg_name = cmdString;
 
-					// perform a complicated Command
-		if(!ExeComp(lineSize)) continue; 
-					// background command	
-	 	if(!BgCmd(lineSize, &BGFlag)) continue;
-					// built in commands
-		ExeCmd(lineSize, cmdString, BGFlag);
-		
-		/* initialize for next line read*/
-		lineSize[0]='\0';
-		cmdString[0]='\0';
+			//add command to history queue also holds problematic commands
+			if (history.size()<=50)
+			{
+				history.push(cmdString);
+			}
+			else{
+				history.pop();
+				history.push(cmdString);
+			}
+
+			// perform a complicated Command
+			if(!ExeComp(lineSize)) continue;
+			// background command
+			if(!BgCmd(lineSize, &BGFlag)) continue;
+			// built in commands
+			ExeCmd(lineSize, cmdString, BGFlag);
+
+			/* initialize for next line read*/
+			lineSize[0]='\0';
+			cmdString[0]='\0';
+		}
+	}catch (const std::exception& e){
+		cout<<e.what()<<endl;
 	}
+
     return 0;
 }
 
